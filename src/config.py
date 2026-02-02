@@ -1,9 +1,9 @@
-"""
-Configuration for Planter UNSW-NB15 BMv2 Integration
+"""Config for Planter UNSW-NB15 BMv2 integration.
 
-Place UNSW-NB15 data in:
-  - data/raw/UNSW-NB15_*.csv  (raw CSV files)
-  - OR data/unsw_nb15.csv     (combined CSV)
+Data locations (checked in order):
+  - data/unsw_results/unsw_nb15_combined.csv
+  - data/unsw_nb15.csv
+  - data/NewCSVs/UNSW-NB15_*.csv or data/raw/UNSW-NB15_*.csv
 """
 
 from dataclasses import dataclass, field
@@ -12,61 +12,41 @@ from pathlib import Path
 
 @dataclass
 class Config:
-    """Configuration for the Planter pipeline."""
+    """Planter pipeline settings."""
 
-    # Paths (all within this project)
     project_root: Path = field(default_factory=lambda: Path(__file__).resolve().parent.parent)
     data_dir: Path = field(default_factory=lambda: Path(__file__).resolve().parent.parent / "data")
     output_dir: Path = field(default_factory=lambda: Path(__file__).resolve().parent.parent / "generated_p4")
 
-    # Dataset paths (within data_dir)
-    unsw_csv_dir: Path | None = None      # data/raw/
-    unsw_combined_csv: Path | None = None  # data/unsw_nb15.csv
+    unsw_csv_dir: Path | None = None
+    unsw_combined_csv: Path | None = None
 
-    # Features for P4 inference (extractable from packet headers)
+    # Must be extractable from packet headers (IP/TCP/UDP)
     p4_features: list = field(default_factory=lambda: [
-        "sttl",    # Source TTL - from IP header
-        "sport",   # Source port - from TCP/UDP header
-        "dsport",  # Destination port - from TCP/UDP header
-        "sbytes",  # Source bytes - from counters
-        "dbytes",  # Destination bytes - from counters
+        "sttl", "sport", "dsport", "sbytes", "dbytes",
     ])
 
-    # Model configuration
-    max_tree_depth: int = 5  # Limit depth for P4 pipeline stages
+    max_tree_depth: int = 5   # P4 pipeline stage limit
     min_samples_leaf: int = 100
     test_size: float = 0.2
     random_state: int = 42
 
-    # Classification mode
-    binary_classification: bool = True  # Normal vs Attack
-
-    # Quantization
-    quantize_bits: int = 8  # Quantize features to 8-bit (0-255)
+    binary_classification: bool = True
+    quantize_bits: int = 8
 
     def __post_init__(self):
-        """Set up default paths after initialization."""
-        # Dataset paths within project (check multiple locations)
         if self.unsw_csv_dir is None:
-            # Try NewCSVs first (current structure), then raw
-            if (self.data_dir / "NewCSVs").exists():
-                self.unsw_csv_dir = self.data_dir / "NewCSVs"
-            else:
-                self.unsw_csv_dir = self.data_dir / "raw"
-        
-        if self.unsw_combined_csv is None:
-            # Try unsw_results first, then root
-            if (self.data_dir / "unsw_results" / "unsw_nb15_combined.csv").exists():
-                self.unsw_combined_csv = self.data_dir / "unsw_results" / "unsw_nb15_combined.csv"
-            else:
-                self.unsw_combined_csv = self.data_dir / "unsw_nb15.csv"
+            self.unsw_csv_dir = self.data_dir / "NewCSVs" if (self.data_dir / "NewCSVs").exists() else self.data_dir / "raw"
 
-        # Ensure directories exist
+        if self.unsw_combined_csv is None:
+            combined = self.data_dir / "unsw_results" / "unsw_nb15_combined.csv"
+            self.unsw_combined_csv = combined if combined.exists() else self.data_dir / "unsw_nb15.csv"
+
         self.data_dir.mkdir(parents=True, exist_ok=True)
         self.output_dir.mkdir(parents=True, exist_ok=True)
 
 
-# UNSW-NB15 column names (49 features)
+# UNSW-NB15 schema (49 columns)
 UNSW_COLUMNS = [
     "srcip", "sport", "dstip", "dsport", "proto", "state", "dur", "sbytes",
     "dbytes", "sttl", "dttl", "sloss", "dloss", "service", "Sload", "Dload",

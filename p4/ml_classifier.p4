@@ -1,13 +1,6 @@
 /*
- * P4 ML Classifier for UNSW-NB15
- * ==============================
- * 
- * In-network ML classification using Planter methodology.
- * Target: BMv2 (v1model)
- * 
- * References:
- * - Planter: https://github.com/In-Network-Machine-Learning/Planter
- * - P4Pir: https://github.com/In-Network-Machine-Learning/P4Pir
+ * P4 ML classifier for UNSW-NB15 (Planter-style).
+ * Target: BMv2 v1model.
  */
 
 #include <core.p4>
@@ -68,22 +61,15 @@ header udp_t {
 }
 
 struct metadata_t {
-    // Routing metadata
     bit<1> is_my_mac;
-    
-    // ML Features (8-bit quantized)
     bit<8> feat_sttl;
     bit<8> feat_sport;
     bit<8> feat_dsport;
     bit<8> feat_sbytes;
     bit<8> feat_dbytes;
-    
-    // Classification codes (Encode-Based approach)
     bit<8> code_0;
     bit<8> code_1;
     bit<8> code_2;
-    
-    // Result
     bit<8> ml_class;
     bit<1> classified;
 }
@@ -160,19 +146,18 @@ control MyIngress(inout headers_t hdr,
         hdr.ipv4.ttl = hdr.ipv4.ttl - 1;
     }
     
-    // MAC verification (needed for shared Docker bridge network)
     action mark_as_my_mac() {
         meta.is_my_mac = 1;
     }
-    
+
+    /* Required on shared Docker bridge: only process packets destined for this switch */
     table my_mac {
         key = { hdr.ethernet.dstAddr: exact; }
         actions = { mark_as_my_mac; drop; }
         size = 8;
         default_action = drop();
     }
-    
-    // Feature extraction
+
     action extract_features() {
         meta.feat_sttl = hdr.ipv4.ttl;
         
@@ -187,8 +172,7 @@ control MyIngress(inout headers_t hdr,
         meta.feat_sbytes = (bit<8>)(hdr.ipv4.totalLen[15:8]);
         meta.feat_dbytes = 0;
     }
-    
-    // ML Feature tables (Encode-Based)
+
     action set_code_0(bit<8> code) { meta.code_0 = code; }
     action set_code_1(bit<8> code) { meta.code_1 = code; }
     action set_code_2(bit<8> code) { meta.code_2 = code; }
@@ -213,8 +197,7 @@ control MyIngress(inout headers_t hdr,
         size = 256;
         default_action = set_code_2(0);
     }
-    
-    // Classification table
+
     action classify(bit<8> ml_class) {
         meta.ml_class = ml_class;
         meta.classified = 1;
@@ -230,8 +213,7 @@ control MyIngress(inout headers_t hdr,
         size = 4096;
         default_action = classify(CLASS_NORMAL);
     }
-    
-    // Routing table
+
     table ipv4_lpm {
         key = { hdr.ipv4.dstAddr: lpm; }
         actions = { set_nhop; drop; }
@@ -240,36 +222,28 @@ control MyIngress(inout headers_t hdr,
     }
     
     apply {
-        // 0. Initialize metadata
         meta.is_my_mac = 0;
-        
-        // 1. Check if packet is for this switch (MAC verification)
         my_mac.apply();
         
         if (meta.is_my_mac == 0) {
             drop();
             return;
         }
-        
+
         if (hdr.ipv4.isValid()) {
-            // 2. Extract features for ML
             extract_features();
-            
-            // 3. ML classification (Encode-Based approach)
-            ml_feature_0.apply();  // sttl -> code_0
-            ml_feature_1.apply();  // sport -> code_1
-            ml_feature_2.apply();  // dsport -> code_2
-            ml_classify.apply();   // (code_0, code_1, code_2) -> ml_class
-            
-            // 4. Log classification result
+            ml_feature_0.apply();
+            ml_feature_1.apply();
+            ml_feature_2.apply();
+            ml_classify.apply();
+
             if (meta.ml_class == CLASS_ATTACK) {
                 log_msg("ML CLASSIFICATION: ATTACK detected");
-                hdr.ipv4.diffserv = 0xFF;  // Mark suspicious packet
+                hdr.ipv4.diffserv = 0xFF;
             } else {
                 log_msg("ML CLASSIFICATION: Normal traffic");
             }
-            
-            // 5. Route the packet
+
             if (hdr.ipv4.ttl > 1) {
                 ipv4_lpm.apply();
             } else {
