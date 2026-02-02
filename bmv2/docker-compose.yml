@@ -1,0 +1,43 @@
+services:
+  s1:
+    container_name: s1
+    build:
+      context: ./Dockerfiles/switch
+    privileged: true
+    cap_add: [NET_ADMIN, NET_RAW]
+    volumes:
+      - ./build:/config
+    networks:
+      bmv2:
+        mac_address: 00:aa:00:00:01:01
+  s2:
+    container_name: s2
+    build:
+      context: ./Dockerfiles/switch
+    privileged: true
+    cap_add: [NET_ADMIN, NET_RAW]
+    volumes:
+      - ./build:/config
+    networks:
+      bmv2:
+        mac_address: 00:aa:00:00:01:02
+
+  h1:
+    container_name: h1
+    build:
+      context: ./Dockerfiles/host
+    privileged: true
+    networks:
+      bmv2:
+        mac_address: "00:00:00:00:01:01"
+  h2:
+    container_name: h2
+    build:
+      context: ./Dockerfiles/host
+    privileged: true
+    networks:
+      bmv2:
+        mac_address: "00:00:00:00:02:02"
+
+networks:
+  bmv2:

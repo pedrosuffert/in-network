@@ -1,0 +1,15 @@
+# UNSW-NB15 Dataset
+
+Place your UNSW-NB15 data here:
+
+## Option 1: Combined CSV
+- `unsw_nb15.csv` - All data in one file
+
+## Option 2: Raw CSVs
+- `raw/UNSW-NB15_1.csv`
+- `raw/UNSW-NB15_2.csv`
+- `raw/UNSW-NB15_3.csv`
+- `raw/UNSW-NB15_4.csv`
+
+## Download
+https://research.unsw.edu.au/projects/unsw-nb15-dataset

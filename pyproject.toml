@@ -1,0 +1,66 @@
+[project]
+name = "planter-unsw-bmv2"
+version = "0.1.0"
+description = "In-Network ML Classification with UNSW-NB15 dataset on BMv2 using Planter methodology"
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+authors = [
+    { name = "Pedro Suffert" }
+]
+keywords = ["p4", "bmv2", "machine-learning", "network-security", "in-network-ml", "planter"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: System :: Networking",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+
+dependencies = [
+    "pandas>=2.0.0",
+    "numpy>=1.24.0",
+    "scikit-learn>=1.3.0",
+    "matplotlib>=3.7.0",
+    "seaborn>=0.12.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "ruff>=0.1.0",
+]
+preprocessing = [
+    "imbalanced-learn>=0.11.0",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/In-Network-Machine-Learning/Planter"
+"UNSW Dataset" = "https://research.unsw.edu.au/projects/unsw-nb15-dataset"
+
+[project.scripts]
+planter-demo = "src.demo:main"
+planter-prepare = "src.prepare_data:main"
+planter-train = "src.train_model:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py39"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W"]
+ignore = ["E501"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
